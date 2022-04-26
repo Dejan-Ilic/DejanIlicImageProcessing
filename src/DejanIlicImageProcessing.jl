@@ -14,5 +14,6 @@ export base_fusion, naive_base_fusion
 include("GuidedFusion.jl")
 export guided_filter, naive_guided_filter, guided_fusion, naive_guided_fusion
 
+include("DenseSIFTFusion.jl")
 
 end
