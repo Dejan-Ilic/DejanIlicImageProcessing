@@ -1,4 +1,3 @@
-using Images
 
 imshow(im::AbstractMatrix{T}) where {T} = reinterpret(Gray{T}, im)
 

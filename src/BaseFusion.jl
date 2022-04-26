@@ -1,4 +1,3 @@
-using Images
 
 function base_fusion(stack::Array{T,3},hws::Int=10,gamma=100) where T
 	ws = 2*hws+1;

@@ -1,5 +1,7 @@
 module DejanIlicImageProcessing
 
+using ImageFeatures, Images
+
 include("Oocytes.jl")
 export read_oocyte_stack, read_oocyte_stack, cell_circle_detection, detect_and_mark_circles
 

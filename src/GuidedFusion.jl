@@ -1,4 +1,3 @@
-using Images
 
 naive_boxfilter(m::AbstractMatrix, r::Int) = imfilter(m, centered(ones(2r+1,2r+1)/(2r+1)^2))
 

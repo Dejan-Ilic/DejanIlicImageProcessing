@@ -1,5 +1,3 @@
-using ImageFeatures
-
 function read_oocyte_stack(main_folder::String, h=800, w=800, z=11)
 	stack = Array{Float64, 3}(undef, h, w, z)
 	i = 0;
