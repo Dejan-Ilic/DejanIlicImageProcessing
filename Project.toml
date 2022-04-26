@@ -3,6 +3,10 @@ uuid = "24c7484c-e4df-49db-beab-d9c972893e2f"
 authors = ["Dejan Ilic <dejan.ilic@vub.be> and contributors"]
 version = "0.1.0"
 
+[deps]
+ImageFeatures = "92ff4b2b-8094-53d3-b29d-97f740f06cef"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+
 [compat]
 julia = "1"
 
