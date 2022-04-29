@@ -1,6 +1,6 @@
 
 naive_boxfilter(m::AbstractMatrix, r::Int) = imfilter(m, centered(ones(2r+1,2r+1)/(2r+1)^2))
-
+#implements guided filtering based on [MATLAB code I found](https://github.com/clarkzjw/GuidedFilter)
 function naive_guided_filter(I, p, r=2, eps=1e-2)
 
 	mean_I = naive_boxfilter(I, r);
@@ -142,6 +142,17 @@ function guided_filter!(out, l1, l2, l3, l4, l5, I, p, boxw::Int=2, eps=1e-2)
 
 	out .= mean_a .* I .+ mean_b
 
+	return out
+end
+
+function guided_filter(I,p,boxw::Int=2,eps=1e-2)
+	out = similar(p)
+	l1=similar(p)
+	l2=similar(p)
+	l3=similar(p)
+	l4=similar(p)
+	l5=similar(p)
+	guided_filter!(out,l1,l2,l3,l4,l5,I,p,boxw,eps)
 	return out
 end
 

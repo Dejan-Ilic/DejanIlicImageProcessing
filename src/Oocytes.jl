@@ -26,6 +26,7 @@ function read_oocyte_stack(n::Int, OOCYTE_FOLDER, OOCYTE_LIST)
 	end
 end
 
+#(https://juliaimages.org/ImageFeatures.jl/dev/function_reference/
 #RADIUS DETERMINED EMPIRICALLY
 function cell_circle_detection(img, p1=98, p2=80, MIN_CELL_RADIUS = 140, MAX_CELL_RADIUS = 210)
 	img_edges = canny(img, (Percentile(p1), Percentile(p2)));

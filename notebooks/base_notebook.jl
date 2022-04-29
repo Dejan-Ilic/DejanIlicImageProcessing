@@ -13,7 +13,7 @@ begin
 end
 
 # ╔═╡ 44bb351e-cfb1-486a-95c5-8f3b27c71cf2
-using TestImages, PlutoUI, Plots
+using TestImages, PlutoUI, Plots, BenchmarkTools
 
 # ╔═╡ 40131e18-feb4-40d5-913d-372d35bd5af5
 md"-----------------------------
