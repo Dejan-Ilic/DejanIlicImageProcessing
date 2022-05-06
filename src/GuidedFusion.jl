@@ -1,21 +1,53 @@
 
-naive_boxfilter(m::AbstractMatrix, r::Int) = imfilter(m, centered(ones(2r+1,2r+1)/(2r+1)^2))
+#naive_boxfilter(m::AbstractMatrix, r::Int) = imfilter(m, centered(ones(2r+1,2r+1)/(2r+1)^2))
+function naive_boxfilter(img, r)
+	res = similar(img)
+	out = similar(img)
+	H, W = size(img)
+
+	#horizontal blur
+	@inbounds Threads.@threads for j=1:W
+		res[1,j] = @views sum(img[1:1+r, j]) + 0*r*img[1,j]
+		for i=2:H
+			add = i+r > H ? 0*img[H, j] : img[i+r, j]
+			sub = i-1-r < 1 ? 0*img[1,j] : img[i-1-r, j]
+			res[i,j] = res[i-1,j] - sub + add
+		end
+	end
+
+	#vertical blur
+	@inbounds Threads.@threads for i=1:H
+		out[i,1] = @views sum(res[i, 1:1+r]) + 0*r*res[i,1]
+		for j=2:W #note: removing the :? and replacing it with 3 loops yields no significant gains
+			add = j+r > W ? 0*res[i, W] : res[i, j+r]
+			sub = j-1-r < 1 ? 0*res[i, 1] : res[i, j-1-r]
+			out[i,j] = out[i,j-1] - sub + add
+		end
+	end
+
+	w = 2r+1
+	#out .= out ./ w^2
+	return out
+end
+
+
 #implements guided filtering based on [MATLAB code I found](https://github.com/clarkzjw/GuidedFilter)
 function naive_guided_filter(I, p, r=2, eps=1e-2)
+	N = naive_boxfilter(ones(eltype(I), size(I)), r)
 
-	mean_I = naive_boxfilter(I, r);
-	mean_p = naive_boxfilter(p, r);
-	mean_Ip = naive_boxfilter(I.*p, r);
+	mean_I = naive_boxfilter(I, r) ./ N
+	mean_p = naive_boxfilter(p, r)  ./ N
+	mean_Ip = naive_boxfilter(I.*p, r) ./N
 	cov_Ip = mean_Ip - mean_I .* mean_p;
 
-	mean_II = naive_boxfilter(I.*I, r);
+	mean_II = naive_boxfilter(I.*I, r) ./ N
 	var_I = mean_II - mean_I .* mean_I;
 
 	a = cov_Ip ./ (var_I .+ eps);
 	b = mean_p - a .* mean_I;
 
-	mean_a = naive_boxfilter(a, r);
-	mean_b = naive_boxfilter(b, r);
+	mean_a = naive_boxfilter(a, r) ./ N
+	mean_b = naive_boxfilter(b, r) ./ N
 
 	q = mean_a .* I + mean_b
 
@@ -24,27 +56,29 @@ end
 
 function naive_guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-6) where T
 	H,W,L = size(stack)
-	B = similar(stack)
-	for l=1:L
-		B[:,:,l] .= @views naive_boxfilter(stack[:,:,l],15)
-	end
-	D = stack - B
 
 	absH = similar(stack)
 	for l=1:L
-		absH[:,:,l] .= @views abs.(imfilter(stack[:,:,l], Kernel.Laplacian()))
+		@views imfilter!(absH[:,:,l], stack[:,:,l], Kernel.Laplacian())
 	end
+	absH .= abs.(absH)
 
 	S = similar(stack)
 	for l=1:L
-		S[:,:,l] .= @views imfilter(absH[:,:,l], Kernel.gaussian(1)) #5x5 kernel
+		@views imfilter!(S[:,:,l], absH[:,:,l],  Kernel.gaussian((5,5),(11,11))) #5x5 kernel
 	end
+	S .+= 1e-12
+	S .= S ./ sum(S, dims=3)
 
-	P = similar(stack)
+
+	P = zeros(T,size(stack))
 	for j=1:W, i=1:H
 		m_ij = @views maximum(S[i,j,:])
 		for l=1:L
-			P[i,j,l] = S[i,j,l]==m_ij ? one(T) : zero(T)
+			if S[i,j,l]==m_ij
+				P[i,j,l] = one(T)
+				break #only the first occurance like in matlab
+			end
 		end
 	end
 
@@ -57,21 +91,28 @@ function naive_guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, �
 		W_D[:,:,l] .= @views naive_guided_filter(stack[:,:,l], P[:,:,l], r2, ε2)
 	end
 
+	#they do this in their implementation
+	@. W_B = min(one(T), max(zero(T), W_B)) + 1e-12
+	@. W_D = min(one(T), max(zero(T), W_D)) + 1e-12
+
 	#normalize
 	for j=1:W, i=1:H
 		s_ij = sum(@views W_B[i,j,:])
-		if s_ij != 0
-			W_B[i,j, :] ./= s_ij
-		end
+		W_B[i,j, :] ./= s_ij
 	end
 	for j=1:W, i=1:H
 		s_ij = sum(@views W_D[i,j,:])
-		if s_ij != 0
-			W_D[i,j, :] ./= s_ij
-		end
+		W_D[i,j, :] ./= s_ij
 	end
 
 	#fusion
+	B = similar(stack)
+	ftr = centered(ones(T,31,31))/(31*31)
+	for l=1:L
+		@views imfilter!(B[:,:,l], stack[:,:,l], ftr)
+	end
+	D = stack - B
+
 	B_bar = sum(W_B .* B, dims=3)
 	D_bar = sum(W_D .* D, dims=3)
 
@@ -158,18 +199,12 @@ end
 
 function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-6) where {T}
     	H,W,L = size(stack)
-    	B = similar(stack)
 
     	l1 = Matrix{T}(undef, H,W)
     	l2 = similar(l1)
     	l3 = similar(l1)
     	l4 = similar(l1)
     	l5 = similar(l1)
-
-    	@inbounds for l=1:L
-    		@views boxfilter!(B[:,:,l], l1, stack[:,:,l], 15)
-    	end
-    	D = stack - B
 
     	absH = similar(stack)
     	@inbounds for l=1:L
@@ -179,7 +214,7 @@ function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-
 
     	S = similar(stack)
     	@inbounds for l=1:L #most memory allocations, but barely performance cost
-    		@views imfilter!(S[:,:,l], absH[:,:,l], Kernel.gaussian(1)) #5x5 kernel
+    		@views imfilter!(S[:,:,l], absH[:,:,l], Kernel.gaussian((5,5),(11,11))) #5x5 kernel
     	end
 
     	P = absH #recycle
@@ -192,7 +227,7 @@ function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-
     		end
 
     		for l=1:L
-    			P[i,j,l] = S[i,j,l]==m_ij ? one(T) : zero(T)
+    			P[i,j,l] = S[i,j,l]==m_ij ? one(T) : zero(T) #they only do this for the lowest l but that is ridiculous
     		end
     	end
 
@@ -204,6 +239,9 @@ function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-
     		@views guided_filter!(W_B[:,:,l], l1,l2,l3,l4,l5, stack[:,:,l], P[:,:,l], r1, ε1)
     		@views guided_filter!(W_D[:,:,l], l1,l2,l3,l4,l5, stack[:,:,l], P[:,:,l], r2, ε2)
     	end
+
+		@. W_B =  max(zero(T), W_B) + 1e-12 #they also bound below 1 but that's pointless
+		@. W_D =  max(zero(T), W_D) + 1e-12
 
 
     	#normalize
@@ -226,10 +264,19 @@ function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-
     		end
     	end
 
+
+
     	#fusion
     	B_bar = l1
     	D_bar = l2
     	out = l3
+
+		B = similar(stack)
+
+		@inbounds for l=1:L
+    		@views boxfilter!(B[:,:,l], l1, stack[:,:,l], 15) #note: their boxfilter uses different boundary conditions
+    	end
+    	D = stack - B
 
     	B .= W_B .* B
     	D .= W_D .* D
