@@ -26,6 +26,18 @@ function read_oocyte_stack(n::Int, OOCYTE_FOLDER, OOCYTE_LIST)
 	end
 end
 
+function oocyte_file_unpack(main_folder)
+	for F=-75:15:75
+		path = joinpath(main_folder, "F$F")
+		imgname = readdir(path)
+		if length(imgname) < 1
+			println("error on F$(F), no img")
+		else
+			cp(joinpath(path,imgname[1]), joinpath(main_folder, "im$F.JPG"))
+		end
+	end
+end
+
 #(https://juliaimages.org/ImageFeatures.jl/dev/function_reference/
 #RADIUS DETERMINED EMPIRICALLY
 function cell_circle_detection(img, p1=98, p2=80, MIN_CELL_RADIUS = 140, MAX_CELL_RADIUS = 210)
