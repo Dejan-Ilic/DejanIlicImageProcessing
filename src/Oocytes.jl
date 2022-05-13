@@ -1,5 +1,4 @@
-function read_oocyte_stack(main_folder::String, h=800, w=800, z=11)
-	stack = Array{Float64, 3}(undef, h, w, z)
+function read_oocyte_stack!(stack::Array{Float64,3}, main_folder::String)
 	i = 0;
 
 	for F=-75:15:75
@@ -8,13 +7,19 @@ function read_oocyte_stack(main_folder::String, h=800, w=800, z=11)
 		imgname = readdir(path)
 		if length(imgname) < 1
 			println("error on F$(F), no img")
-			continue
+			stack[:,:,i] .= -1 #signals error
+		else
+			stack[:,:,i] .= load(joinpath(path,imgname[1]))
 		end
-
-		stack[:,:,i] .= load(joinpath(path,imgname[1]))
 	end
 
 	return stack
+end
+
+function read_oocyte_stack(main_folder::String, h=800, w=800, z=11)
+	stack = Array{Float64, 3}(undef, h, w, z)
+
+	return read_oocyte_stack!(stack, main_folder)
 end
 
 function read_oocyte_stack(n::Int, OOCYTE_FOLDER, OOCYTE_LIST)
