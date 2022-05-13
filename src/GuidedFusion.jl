@@ -116,7 +116,7 @@ function naive_guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, �
 	B_bar = sum(W_B .* B, dims=3)
 	D_bar = sum(W_D .* D, dims=3)
 
-	return dropdims(B_bar + D_bar, dims=3)
+	return min.(one(eltype(B_bar)), max.(zero(eltype(B_bar)), dropdims(B_bar + D_bar, dims=3)))
 end
 
 function boxfilter!(out, res, img, r)
@@ -213,8 +213,9 @@ function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-
     	absH .= abs.(absH)
 
     	S = similar(stack)
+		gauk = Kernel.gaussian((5,5),(11,11))
     	@inbounds for l=1:L #most memory allocations, but barely performance cost
-    		@views imfilter!(S[:,:,l], absH[:,:,l], Kernel.gaussian((5,5),(11,11))) #5x5 kernel
+    		@views imfilter!(S[:,:,l], absH[:,:,l], gauk) #5x5 kernel
     	end
 
     	P = absH #recycle
@@ -264,13 +265,7 @@ function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-
     		end
     	end
 
-
-
     	#fusion
-    	B_bar = l1
-    	D_bar = l2
-    	out = l3
-
 		B = similar(stack)
 
 		@inbounds for l=1:L
@@ -281,9 +276,13 @@ function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-
     	B .= W_B .* B
     	D .= W_D .* D
 
+		B_bar = l1
+    	D_bar = l2
+    	out = l3
+
     	sum!(B_bar, B)
     	sum!(D_bar, D)
 
-    	out .= B_bar .+ D_bar
+    	out .= min.(one(T), max.(zero(T), B_bar .+ D_bar))
     	return out
     end
