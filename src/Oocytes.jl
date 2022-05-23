@@ -78,6 +78,16 @@ function detect_and_mark_circles(img, p1, p2, m, M)
 	colimg
 end
 
+function crop_cell(img, center, cropsize::Int=512)
+	H, W = size(img)
+	d = cropsize÷2
+
+	ci = max(1 + d, min(H-d, center[1]))
+	cj = max(1 + d, min(W-d, center[2]))
+
+	return img[ci-d:ci+d-1, cj-d:cj+d-1]
+end
+
 function preprocess_cell(img::Matrix{T}, cropsize::Int=512) where {T}
 	centers, radii = cell_circle_detection(img)
 	if length(centers) == 0
@@ -86,15 +96,11 @@ function preprocess_cell(img::Matrix{T}, cropsize::Int=512) where {T}
 		return nothing
 	end
 
-	H, W = size(img)
-	d = cropsize÷2
 	nc = length(centers)
-	center = (sum(c[1] for c in centers)÷nc, sum(c[2] for c in centers)÷nc)
+	center = (sum(c[1] for c in centers)÷nc,
+			  sum(c[2] for c in centers)÷nc)
 
-	ci = max(1 + d, min(H-d, center[1]))
-	cj = max(1 + d, min(W-d, center[2]))
-
-	return img[ci-d:ci+d-1, cj-d:cj+d-1]
+	return crop_cell(img, center, cropsize)
 end
 
 function preprocess_cell(stack::Array{T, 3}, cropsize::Int=512) where {T}
