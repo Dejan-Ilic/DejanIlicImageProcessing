@@ -5,7 +5,8 @@ using ImageFeatures, Images
 include("Oocytes.jl")
 export read_oocyte_stack, read_oocyte_stack,
     cell_circle_detection, detect_and_mark_circles,
-    preprocess_cell, crop_cell
+    preprocess_cell, crop_cell,
+    flatten_oocyte_folder
 
 include("ImageUtils.jl")
 export imshow, graytofloat, imrescale, abslogrescale

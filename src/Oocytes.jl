@@ -121,3 +121,29 @@ function preprocess_cell(stack::Array{T, 3}, cropsize::Int=512) where {T}
 
 	return CartesianIndex(center[1]÷nc, center[2]÷nc)
 end
+
+function flatten_oocyte_folder(src::String, dest::String)
+	mkdir(dest)
+	for F=-75:15:75
+		folder = joinpath(src, "F$F")
+		ims = readdir(folder)
+		if length(ims) == 0
+			@error "$folder is empty"
+		else
+			if length(ims) > 1
+				@warn "Found multiple images in $folder"
+			end
+			im = joinpath(folder, ims[1])
+
+			cp(im, joinpath(dest, "F$F.jpg"))
+		end
+	end
+end
+
+function flatten_oocyte_folder(n::Int, OOCYTE_FOLDER, OOCYTE_LIST, dest::String="")
+	if n < 1 || n > length(OOCYTE_LIST)
+		@error "index out of bounds, should be at most $(length(OOCYTE_LIST))"
+	end
+
+	flatten_oocyte_folder(joinpath(OOCYTE_FOLDER, OOCYTE_LIST[n]), joinpath(dest, OOCYTE_LIST[n]))
+end
