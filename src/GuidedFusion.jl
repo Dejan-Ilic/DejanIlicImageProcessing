@@ -197,6 +197,13 @@ function guided_filter(I,p,boxw::Int=2,eps=1e-2)
 	return out
 end
 
+"""
+	guided_fusion(stack, r1=45, ϵ1=0.3, r2=7, ε2=1e-6)
+
+Performs guided_fusion on `stack::Array{3}` and outputs `im::Array{2}`.
+Internally, it splits into approximation and detail coefficients.
+The parameters `r1` and `ϵ1` are for approximation coefficients.
+"""
 function guided_fusion(stack::AbstractArray{T, 3}, r1=45, ε1=0.3, r2=7, ε2=1e-6) where {T}
     	H,W,L = size(stack)
 

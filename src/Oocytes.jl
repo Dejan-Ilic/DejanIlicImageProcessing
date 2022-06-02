@@ -22,6 +22,9 @@ function read_oocyte_stack(main_folder::String, h=800, w=800, z=11)
 	return read_oocyte_stack!(stack, main_folder)
 end
 
+"""
+	read_oocyte_stack(n, oocyte_main_folder, oocyte_list)::Array{F64, 3}
+"""
 function read_oocyte_stack(n::Int, OOCYTE_FOLDER, OOCYTE_LIST)
 	if n < 1 || n > length(OOCYTE_LIST)
 		throw(DomainError(n, "Out of range: n should be between 1 and $(length(OOCYTE_LIST))"))
@@ -31,17 +34,7 @@ function read_oocyte_stack(n::Int, OOCYTE_FOLDER, OOCYTE_LIST)
 	end
 end
 
-function oocyte_file_unpack(main_folder)
-	for F=-75:15:75
-		path = joinpath(main_folder, "F$F")
-		imgname = readdir(path)
-		if length(imgname) < 1
-			println("error on F$(F), no img")
-		else
-			cp(joinpath(path,imgname[1]), joinpath(main_folder, "im$F.JPG"))
-		end
-	end
-end
+
 
 #(https://juliaimages.org/ImageFeatures.jl/dev/function_reference/
 #RADIUS DETERMINED EMPIRICALLY
@@ -88,6 +81,12 @@ function crop_cell(img, center, cropsize::Int=512)
 	return img[ci-d:ci+d-1, cj-d:cj+d-1]
 end
 
+"""
+	preprocess_cell(im/stack, cropsize=512)
+
+Crops an `image::Array{2}` or a `stack::Array{3}` around the center of the detected circle.
+Returns the cropped image or the center of the crop respectively.
+"""
 function preprocess_cell(img::Matrix{T}, cropsize::Int=512) where {T}
 	centers, radii = cell_circle_detection(img)
 	if length(centers) == 0
@@ -122,6 +121,9 @@ function preprocess_cell(stack::Array{T, 3}, cropsize::Int=512) where {T}
 	return CartesianIndex(center[1]÷nc, center[2]÷nc)
 end
 
+"""
+	flatten_oocyte_folder(src_folder, dest_folder)
+"""
 function flatten_oocyte_folder(src::String, dest::String)
 	mkdir(dest)
 	for F=-75:15:75
@@ -140,6 +142,11 @@ function flatten_oocyte_folder(src::String, dest::String)
 	end
 end
 
+"""
+	flatten_oocyte_folder(n, src, oocyte_list, dest)
+
+Unpacks the `n`th oocyte of `OOCYTEFOLDER/OOCYTE_LIST[n]` and saves it into `dest`.
+"""
 function flatten_oocyte_folder(n::Int, OOCYTE_FOLDER, OOCYTE_LIST, dest::String="")
 	if n < 1 || n > length(OOCYTE_LIST)
 		@error "index out of bounds, should be at most $(length(OOCYTE_LIST))"
@@ -147,3 +154,18 @@ function flatten_oocyte_folder(n::Int, OOCYTE_FOLDER, OOCYTE_LIST, dest::String=
 
 	flatten_oocyte_folder(joinpath(OOCYTE_FOLDER, OOCYTE_LIST[n]), joinpath(dest, OOCYTE_LIST[n]))
 end
+
+#i forgotted i wrotend this code. many stoopid
+#=
+function oocyte_file_unpack(main_folder)
+	for F=-75:15:75
+		path = joinpath(main_folder, "F$F")
+		imgname = readdir(path)
+		if length(imgname) < 1
+			println("error on F$(F), no img")
+		else
+			cp(joinpath(path,imgname[1]), joinpath(main_folder, "im$F.JPG"))
+		end
+	end
+end
+=#

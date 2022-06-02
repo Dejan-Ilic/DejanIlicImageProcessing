@@ -1,4 +1,11 @@
+"""
+	base_fusion(stack, hws=10, gamma=100)
 
+Simple and fast fusion algorithm.
+# Arguments
+- `hws::Int`: smoothing window size
+- `gamma::Float64`: boost most salient layer of pixel by this factor
+"""
 function base_fusion(stack::Array{T,3},hws::Int=10,gamma=100) where T
 	ws = 2*hws+1;
 	kernel = centered(ones(eltype(stack), (ws, ws)));
