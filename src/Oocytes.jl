@@ -6,10 +6,13 @@ function read_oocyte_stack!(stack::Array{Float64,3}, main_folder::String)
 		path = joinpath(main_folder, "F$F")
 		imgname = readdir(path)
 		if length(imgname) < 1
-			println("error on F$(F), no img")
-			stack[:,:,i] .= -1 #signals error
+			throw(ErrorException("No image found in F$F"))
 		else
-			stack[:,:,i] .= load(joinpath(path,imgname[1]))
+			stack[:,:,i] .= try
+				load(joinpath(path,imgname[1]))
+			catch e
+				throw(e)
+			end 
 		end
 	end
 
@@ -90,9 +93,10 @@ Returns the cropped image or the center of the crop respectively.
 function preprocess_cell(img::Matrix{T}, cropsize::Int=512) where {T}
 	centers, radii = cell_circle_detection(img)
 	if length(centers) == 0
-		@info "No circles found, changing params..."
+		#@info "No circles found, changing params..."
 		#todo
-		return nothing
+
+		throw(ErrorException("No circles found in image"))
 	end
 
 	nc = length(centers)
@@ -114,7 +118,7 @@ function preprocess_cell(stack::Array{T, 3}, cropsize::Int=512) where {T}
 	end
 
 	if nc == 0
-		@info "No circles found in any layer"
+		 throw(ErrorException("No circles found in any layer"))
 		#todo
 	end
 

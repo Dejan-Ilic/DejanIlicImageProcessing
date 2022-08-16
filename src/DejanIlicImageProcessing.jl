@@ -9,7 +9,7 @@ export read_oocyte_stack, read_oocyte_stack,
     flatten_oocyte_folder
 
 include("ImageUtils.jl")
-export imshow, graytofloat, imrescale, abslogrescale
+export imshow, sliceshow, graytofloat, imrescale, abslogrescale
 
 include("BaseFusion.jl")
 export base_fusion, naive_base_fusion
